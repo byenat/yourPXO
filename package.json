@@ -1,0 +1,72 @@
+{
+  "name": "yourPXO",
+  "version": "1.0.0",
+  "description": "个人体验优化系统 - 跨平台AI增强应用",
+  "private": true,
+  "workspaces": [
+    "Core",
+    "AI/*",
+    "Mobile",
+    "Desktop", 
+    "Browser",
+    "Glasses",
+    "Sync",
+    "Shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:core\" \"npm run dev:sync\" \"npm run dev:mobile\"",
+    "dev:core": "cd Core && npm run dev",
+    "dev:sync": "cd Sync && npm run dev",
+    "dev:mobile": "cd Mobile && npm run dev",
+    "dev:desktop": "cd Desktop && npm run dev",
+    "dev:browser": "cd Browser && npm run dev",
+    "build": "npm run build:shared && npm run build:core && npm run build:sync",
+    "build:shared": "cd Shared && npm run build",
+    "build:core": "cd Core && npm run build",
+    "build:sync": "cd Sync && npm run build",
+    "test": "npm run test:shared && npm run test:core",
+    "test:shared": "cd Shared && npm test",
+    "test:core": "cd Core && npm test",
+    "install:all": "npm install && npm run install:workspaces",
+    "install:workspaces": "npm run install:core && npm run install:sync && npm run install:mobile && npm run install:desktop && npm run install:browser && npm run install:shared",
+    "install:core": "cd Core && npm install",
+    "install:sync": "cd Sync && npm install",
+    "install:mobile": "cd Mobile && npm install",
+    "install:desktop": "cd Desktop && npm install",
+    "install:browser": "cd Browser && npm install",
+    "install:shared": "cd Shared && npm install",
+    "start": "npm run start:core",
+    "start:core": "cd Core && npm start",
+    "start:sync": "cd Sync && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.5",
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.1"
+  },
+  "dependencies": {
+    "@byenatos/sdk": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/byenat/yourPXO.git"
+  },
+  "keywords": [
+    "AI",
+    "personal-experience",
+    "cross-platform",
+    "byenatOS",
+    "mobile",
+    "desktop",
+    "browser-extension",
+    "smart-glasses"
+  ],
+  "author": "yourPXO Team",
+  "license": "MIT"
+}
