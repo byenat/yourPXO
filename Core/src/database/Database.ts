@@ -1,5 +1,8 @@
-import sqlite3 from 'sqlite3';
+import * as sqlite3 from 'sqlite3';
 import { open, Database as SQLiteDatabase } from 'sqlite';
+import { ContentItem } from '../services/ContentService';
+import { AIAnalysisResult, Conversation } from '../services/AIService';
+import { SyncChange, SyncConflict, BackupInfo } from '../services/SyncService';
 
 export interface User {
   id: string;
@@ -106,6 +109,158 @@ export class Database {
         FOREIGN KEY (user_id) REFERENCES users (id),
         FOREIGN KEY (device_id) REFERENCES devices (id)
       )
+    `);
+
+    // 内容表
+    await this.db.exec(`
+      CREATE TABLE IF NOT EXISTS contents (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        title TEXT,
+        content TEXT NOT NULL,
+        metadata TEXT NOT NULL,
+        tags TEXT NOT NULL,
+        is_private BOOLEAN DEFAULT TRUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    // 标注表
+    await this.db.exec(`
+      CREATE TABLE IF NOT EXISTS annotations (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        content_id TEXT NOT NULL,
+        content_type TEXT NOT NULL,
+        annotation_type TEXT NOT NULL,
+        selection TEXT,
+        note TEXT,
+        tags TEXT,
+        color TEXT,
+        is_private BOOLEAN DEFAULT TRUE,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (content_id) REFERENCES contents (id)
+      )
+    `);
+
+    // AI分析结果表
+    await this.db.exec(`
+      CREATE TABLE IF NOT EXISTS ai_analyses (
+        id TEXT PRIMARY KEY,
+        content_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        analysis_type TEXT NOT NULL,
+        results TEXT NOT NULL,
+        model TEXT NOT NULL,
+        processing_time INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (content_id) REFERENCES contents (id)
+      )
+    `);
+
+    // 对话表
+    await this.db.exec(`
+      CREATE TABLE IF NOT EXISTS conversations (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        title TEXT,
+        messages TEXT NOT NULL,
+        context TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    // 用户AI记忆表
+    await this.db.exec(`
+      CREATE TABLE IF NOT EXISTS user_ai_memory (
+        id TEXT PRIMARY KEY,
+        user_id TEXT UNIQUE NOT NULL,
+        memory_data TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    // 同步更改表
+    await this.db.exec(`
+      CREATE TABLE IF NOT EXISTS sync_changes (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        device_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        resource_type TEXT NOT NULL,
+        resource_id TEXT NOT NULL,
+        data TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        version INTEGER DEFAULT 1,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (device_id) REFERENCES devices (id)
+      )
+    `);
+
+    // 同步冲突表
+    await this.db.exec(`
+      CREATE TABLE IF NOT EXISTS sync_conflicts (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        resource_type TEXT NOT NULL,
+        resource_id TEXT NOT NULL,
+        local_version TEXT NOT NULL,
+        remote_version TEXT NOT NULL,
+        conflict_type TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    // 备份表
+    await this.db.exec(`
+      CREATE TABLE IF NOT EXISTS backups (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        size INTEGER NOT NULL,
+        item_count INTEGER NOT NULL,
+        metadata TEXT NOT NULL,
+        data TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    // 同步历史表
+    await this.db.exec(`
+      CREATE TABLE IF NOT EXISTS sync_history (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        device_id TEXT NOT NULL,
+        sync_type TEXT NOT NULL,
+        status TEXT NOT NULL,
+        synced_items INTEGER DEFAULT 0,
+        conflicts INTEGER DEFAULT 0,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (device_id) REFERENCES devices (id)
+      )
+    `);
+
+    // 创建索引
+    await this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_contents_user_id ON contents (user_id);
+      CREATE INDEX IF NOT EXISTS idx_contents_type ON contents (type);
+      CREATE INDEX IF NOT EXISTS idx_contents_created_at ON contents (created_at);
+      CREATE INDEX IF NOT EXISTS idx_annotations_user_id ON annotations (user_id);
+      CREATE INDEX IF NOT EXISTS idx_annotations_content_id ON annotations (content_id);
+      CREATE INDEX IF NOT EXISTS idx_sync_changes_user_id ON sync_changes (user_id);
+      CREATE INDEX IF NOT EXISTS idx_sync_changes_timestamp ON sync_changes (timestamp);
     `);
   }
 

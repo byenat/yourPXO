@@ -1,0 +1,12 @@
+node_modules
+
+# byenatOS integration
+AI/byenatOS-core/.venv/
+AI/byenatOS-core/__pycache__/
+AI/byenatOS-core/*.pyc
+AI/byenatOS-core/.pytest_cache/
+
+# Development
+.env
+.env.local
+*.log

@@ -1,129 +1,123 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import dotenv from 'dotenv';
-import { ByenatOSService } from './services/ByenatOSService';
-import { UserService } from './services/UserService';
-import { DeviceService } from './services/DeviceService';
-import { ConfigService } from './services/ConfigService';
-import { Logger } from './utils/Logger';
+import { createServer } from 'http';
+import WebSocket from 'ws';
+
+// Import services
 import { Database } from './database/Database';
+import { Logger } from './utils/Logger';
+
+// Import routes
+import { authRoutes } from './routes/auth';
+import { userRoutes } from './routes/user';
+import { contentRoutes } from './routes/content';
+import { aiRoutes } from './routes/ai';
+import { hinataRoutes } from './routes/hinata';
+import { syncRoutes } from './routes/sync';
+
+// Import middleware
+import { authMiddleware } from './middleware/auth';
+import { rateLimitMiddleware } from './middleware/rateLimit';
+import { errorHandler } from './middleware/errorHandler';
 
 // 加载环境变量
 dotenv.config();
 
-class CoreServer {
-  private app: express.Application;
-  private port: number;
-  private byenatOSService: ByenatOSService;
-  private userService: UserService;
-  private deviceService: DeviceService;
-  private configService: ConfigService;
-  private logger: Logger;
-  private database: Database;
+const app = express();
+const port = process.env.PORT || 3001;
 
-  constructor() {
-    this.port = parseInt(process.env.PORT || '3001');
-    this.app = express();
-    this.logger = new Logger();
-    this.database = new Database();
-    
-    // 初始化服务
-    this.byenatOSService = new ByenatOSService();
-    this.userService = new UserService(this.database);
-    this.deviceService = new DeviceService(this.database);
-    this.configService = new ConfigService(this.database);
-    
-    this.initialize();
-  }
+// 创建HTTP服务器
+const server = createServer(app);
 
-  private async initialize() {
+// 创建WebSocket服务器用于实时同步
+const wss = new WebSocket.Server({ server });
+
+// 初始化数据库
+const database = new Database();
+database.initialize();
+
+// 安全和性能中间件
+app.use(helmet());
+app.use(compression());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*',
+  credentials: true
+}));
+
+// 基础中间件
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// 请求日志
+app.use((req, res, next) => {
+  Logger.info(`${req.method} ${req.path} - IP: ${req.ip}`);
+  next();
+});
+
+// 速率限制
+app.use(rateLimitMiddleware);
+
+// 健康检查
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    service: 'yourPXO Core API',
+    version: '1.0.0'
+  });
+});
+
+// API路由
+app.use('/api/auth', authRoutes);
+app.use('/api/user', authMiddleware, userRoutes);
+app.use('/api/content', authMiddleware, contentRoutes);
+app.use('/api/ai', authMiddleware, aiRoutes);
+app.use('/api/hinata', authMiddleware, hinataRoutes);
+app.use('/api/sync', authMiddleware, syncRoutes);
+
+// WebSocket连接处理
+wss.on('connection', (ws, request) => {
+  Logger.info('新的WebSocket连接建立');
+  
+  ws.on('message', (message) => {
     try {
-      // 初始化数据库
-      await this.database.initialize();
-      
-      // 设置中间件
-      this.setupMiddleware();
-      
-      // 设置路由
-      this.setupRoutes();
-      
-      // 启动服务器
-      this.start();
-      
-      this.logger.info('Core server initialized successfully');
+      const data = JSON.parse(message.toString());
+      // 处理实时同步消息
+      handleRealtimeMessage(ws, data);
     } catch (error) {
-      this.logger.error('Failed to initialize core server', error);
-      process.exit(1);
+      Logger.error('WebSocket消息处理错误:', error);
     }
-  }
+  });
 
-  private setupMiddleware() {
-    // 安全中间件
-    this.app.use(helmet());
-    
-    // CORS中间件
-    this.app.use(cors({
-      origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-      credentials: true
-    }));
-    
-    // JSON解析中间件
-    this.app.use(express.json({ limit: '10mb' }));
-    this.app.use(express.urlencoded({ extended: true }));
-    
-    // 日志中间件
-    this.app.use((req, res, next) => {
-      this.logger.info(`${req.method} ${req.path}`, {
-        ip: req.ip,
-        userAgent: req.get('User-Agent')
-      });
-      next();
-    });
-  }
+  ws.on('close', () => {
+    Logger.info('WebSocket连接关闭');
+  });
+});
 
-  private setupRoutes() {
-    // 健康检查
-    this.app.get('/health', (req, res) => {
-      res.json({ status: 'healthy', timestamp: new Date().toISOString() });
-    });
-
-    // 用户相关路由
-    this.app.post('/api/user/register', this.userService.register.bind(this.userService));
-    this.app.post('/api/user/login', this.userService.login.bind(this.userService));
-    this.app.get('/api/user/profile', this.userService.getProfile.bind(this.userService));
-    this.app.put('/api/user/profile', this.userService.updateProfile.bind(this.userService));
-
-    // 设备相关路由
-    this.app.post('/api/device/register', this.deviceService.register.bind(this.deviceService));
-    this.app.put('/api/device/status', this.deviceService.updateStatus.bind(this.deviceService));
-    this.app.get('/api/device/list', this.deviceService.getDevices.bind(this.deviceService));
-
-    // 配置相关路由
-    this.app.get('/api/config/user', this.configService.getUserConfig.bind(this.configService));
-    this.app.put('/api/config/user', this.configService.updateUserConfig.bind(this.configService));
-    this.app.get('/api/config/device/:deviceId', this.configService.getDeviceConfig.bind(this.configService));
-    this.app.put('/api/config/device/:deviceId', this.configService.updateDeviceConfig.bind(this.configService));
-
-    // byenatOS AI相关路由
-    this.app.post('/api/ai/personalized-prompt', this.byenatOSService.getPersonalizedPrompt.bind(this.byenatOSService));
-    this.app.post('/api/ai/update-activity', this.byenatOSService.updateActivity.bind(this.byenatOSService));
-    this.app.post('/api/ai/analyze-content', this.byenatOSService.analyzeContent.bind(this.byenatOSService));
-    this.app.post('/api/ai/focus-analysis', this.byenatOSService.analyzeFocus.bind(this.byenatOSService));
-
-    // 错误处理中间件
-    this.app.use((error: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-      this.logger.error('Unhandled error', error);
-      res.status(500).json({ error: 'Internal server error' });
-    });
-  }
-
-  private start() {
-    this.app.listen(this.port, () => {
-      this.logger.info(`Core server running on port ${this.port}`);
-    });
+// 实时消息处理
+function handleRealtimeMessage(ws: WebSocket, data: any) {
+  switch (data.type) {
+    case 'ping':
+      ws.send(JSON.stringify({ type: 'pong' }));
+      break;
+    case 'sync_request':
+      // 处理同步请求
+      break;
+    default:
+      Logger.warn('未知的WebSocket消息类型:', data.type);
   }
 }
 
+// 错误处理中间件
+app.use(errorHandler);
+
 // 启动服务器
-new CoreServer();
+server.listen(port, () => {
+  Logger.info(`yourPXO Core API服务启动成功，端口: ${port}`);
+  Logger.info(`WebSocket服务器已启动`);
+});
+
+

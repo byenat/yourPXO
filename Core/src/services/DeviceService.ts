@@ -27,6 +27,7 @@ export class DeviceService {
         platform,
         version,
         name,
+        lastSeen: new Date(),
         isOnline: true,
         isTrusted: false
       });

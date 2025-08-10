@@ -125,6 +125,7 @@ async function detectFocusMode(userId: string, activityData: any) {
 ### 数据本地化
 - 优先使用本地AI模型
 - 敏感数据不上传云端
+- yourPXO → byenatOS 传输阶段不做 PII 脱敏；对在线大模型的调用中由 byenatOS 执行敏感信息隔离和过滤
 - 本地缓存机制
 - 用户数据控制权
 
@@ -133,6 +134,35 @@ async function detectFocusMode(userId: string, activityData: any) {
 - 请求签名验证
 - 数据脱敏处理
 - 传输加密
+
+## HiNATA 支持与边界
+
+- **Schema定义**: 提供`HiNATASchema`类型与`ValidateHiNATA`校验工具（通过 byenatOS SDK 暴露）。
+- **本地算子**: 提供无状态的本地模型算子，用于在设备侧对内容进行丰富：
+  - `SuggestTags`（标签建议）
+  - `RecommendHighlights`（重点高亮建议）
+  - `Summarize`（摘要与要点）
+  - `Embed`（文本向量）
+  - `ExtractEntities`（实体识别）
+  - `ClusterTopics`（主题聚类）
+- **职责边界**: 不处理用户标识与用户态逻辑；不持久化；不直接与用户交互。yourPXO 负责信息摄入、`MapToHiNATA`、持久化与用户确认流程。
+
+### TypeScript 接口（示例）
+
+```ts
+export interface HiNATASchemaTools {
+  ValidateHiNATA(input: any): Promise<{ Valid: boolean; Errors?: string[] }>;
+}
+
+export interface LocalAIOperators {
+  SuggestTags(input: { Content: string; TopK?: number }): Promise<{ Tags: Array<{ Tag: string; Score: number }> }>;
+  RecommendHighlights(input: { Content: string; Language?: string; MaxHighlights?: number }): Promise<{ Highlights: Array<{ Start: number; End: number; Confidence: number; Reason: string }> }>;
+  Summarize(input: { Content: string; MaxLength?: number }): Promise<{ Summary: string; KeyPoints: string[] }>;
+  Embed(input: { Content: string; Model?: string }): Promise<{ Vector: number[]; Dim: number }>;
+}
+```
+
+> EN: This module exposes HiNATA schema and local AI operators only. User data handling, mapping, persistence and UX are owned by yourPXO.
 
 ## 配置选项
 

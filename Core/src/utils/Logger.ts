@@ -1,6 +1,6 @@
-import winston from 'winston';
+import * as winston from 'winston';
 
-export class Logger {
+class LoggerService {
   private logger: winston.Logger;
 
   constructor() {
@@ -45,3 +45,14 @@ export class Logger {
     this.logger.debug(message, meta);
   }
 }
+
+// 创建单例实例
+const loggerInstance = new LoggerService();
+
+// 导出静态方法
+export const Logger = {
+  info: (message: string, meta?: any) => loggerInstance.info(message, meta),
+  error: (message: string, error?: any) => loggerInstance.error(message, error),
+  warn: (message: string, meta?: any) => loggerInstance.warn(message, meta),
+  debug: (message: string, meta?: any) => loggerInstance.debug(message, meta)
+};
