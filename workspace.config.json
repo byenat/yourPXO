@@ -1,0 +1,91 @@
+{
+  "workspace": {
+    "name": "byenat",
+    "version": "1.0.0",
+    "description": "Unified workspace for yourPXO development with direct access to byenatOS source code"
+  },
+  "structure": {
+    "yourPXO": {
+      "path": ".",
+      "type": "primary",
+      "description": "Personal Experience Optimization System"
+    },
+    "Apps": {
+      "path": "Apps",
+      "type": "group",
+      "description": "Parallel standalone apps managed in the workspace",
+      "apps": {
+        "ZenRead": {
+          "path": "../ZenRead",
+          "type": "product",
+          "capabilities": ["ReadItLater"],
+          "shares": { "HiNATA": true, "PSP": true, "Scope": "account", "AppOverlay": true }
+        },
+        "ZenNote": {
+          "path": "../ZenNote",
+          "type": "product",
+          "capabilities": ["DailyNote"],
+          "shares": { "HiNATA": true, "PSP": true, "Scope": "account", "AppOverlay": true }
+        }
+      }
+    },
+    "byenatOS": {
+      "path": "AI/byenatOS-core",
+      "type": "submodule",
+      "description": "AI Operating System - Core Implementation",
+      "repository": "https://github.com/byenat/byenatOS.git",
+      "branch": "main"
+    }
+  },
+  "integration": {
+    "HiNATA": {
+      "definition_source": "AI/byenatOS-core/Documentation/zh/APIs/HiNATADefinition.md",
+      "format_source": "AI/byenatOS-core/Documentation/zh/APIs/HiNATAFormat.md",
+      "processor_source": "AI/byenatOS-core/Kernel/Core/HiNATAProcessor.py",
+      "yourPXO_implementation": "Core/src/services/HiNATAService.ts"
+    },
+    "responsibilities": {
+      "yourPXO": [
+        "用户数据管理",
+        "信息摄入与预处理",
+        "HiNATA映射与存储",
+        "用户界面与交互",
+        "人机确认流程",
+        "跨设备同步"
+      ],
+      "byenatOS": [
+        "HiNATA Schema定义",
+        "本地AI算子提供",
+        "无状态处理服务",
+        "质量评分算法",
+        "格式校验工具"
+      ]
+    }
+  },
+  "development": {
+    "environment": {
+      "node_version": ">=18.0.0",
+      "python_version": ">=3.9.0",
+      "package_managers": ["npm", "pip"]
+    },
+    "scripts": {
+      "setup": "./scripts/setup-workspace.sh",
+      "dev:yourPXO": "cd Core && npm run dev",
+      "dev:byenatOS": "cd AI/byenatOS-core && python -m pip install -e .",
+      "test:integration": "./scripts/test-integration.sh",
+      "sync:submodule": "git submodule update --remote --merge"
+    },
+    "key_files": {
+      "HiNATA_definition": "AI/byenatOS-core/Documentation/zh/APIs/HiNATADefinition.md",
+      "HiNATA_format": "AI/byenatOS-core/Documentation/zh/APIs/HiNATAFormat.md",
+      "HiNATA_processor": "AI/byenatOS-core/Kernel/Core/HiNATAProcessor.py",
+      "yourPXO_integration": "AI/byenatOS/README.md"
+    }
+  },
+  "documentation": {
+    "architecture": "ARCHITECTURE.md",
+    "workspace_guide": "WORKSPACE_GUIDE.md",
+    "integration_guide": "AI/byenatOS/README.md",
+    "HiNATA_docs": "AI/byenatOS-core/Documentation/"
+  }
+}

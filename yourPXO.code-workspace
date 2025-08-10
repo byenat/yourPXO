@@ -1,0 +1,65 @@
+{
+    "folders": [
+        {
+            "name": "yourPXO",
+            "path": "."
+        },
+    {
+      "name": "ZenRead",
+      "path": "../ZenRead"
+    },
+    {
+      "name": "ZenNote",
+      "path": "../ZenNote"
+    },
+        {
+            "name": "byenatOS Core",
+            "path": "AI/byenatOS-core"
+        }
+    ],
+    "settings": {
+        "typescript.preferences.importModuleSpecifier": "relative",
+        "editor.codeActionsOnSave": {
+            "source.fixAll.eslint": "explicit"
+        },
+        "python.defaultInterpreterPath": "./AI/byenatOS-core/.venv/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "files.associations": {
+            "*.hinata": "json"
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "ms-vscode.vscode-typescript-next",
+            "ms-python.python",
+            "ms-python.pylint",
+            "bradlc.vscode-tailwindcss",
+            "esbenp.prettier-vscode",
+            "ms-vscode.vscode-json"
+        ]
+    },
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "Launch yourPXO Core",
+                "type": "node",
+                "request": "launch",
+                "program": "${workspaceFolder}/Core/src/index.ts",
+                "outFiles": ["${workspaceFolder}/Core/dist/**/*.js"],
+                "env": {
+                    "NODE_ENV": "development"
+                }
+            },
+            {
+                "name": "Debug HiNATA Processor",
+                "type": "python",
+                "request": "launch",
+                "program": "${workspaceFolder}/AI/byenatOS-core/Kernel/Core/HiNATAProcessor.py",
+                "console": "integratedTerminal",
+                "cwd": "${workspaceFolder}/AI/byenatOS-core"
+            }
+        ]
+    }
+}
