@@ -10,3 +10,14 @@ AI/byenatOS-core/.pytest_cache/
 .env
 .env.local
 *.log
+
+# 编译的 JavaScript 文件（从 TypeScript 生成）
+Core/src/**/*.js
+!Core/src/index.js
+Core/src/**/*.js.map
+
+# 构建产物
+Core/dist/
+
+# 测试文件
+Core/test-*.js
