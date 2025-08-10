@@ -1,0 +1,6 @@
+[submodule "External/byenatOS"]
+	path = External/byenatOS
+	url = https://github.com/byenat/byenatOS
+[submodule "AI/byenatOS-core"]
+	path = AI/byenatOS-core
+	url = https://github.com/byenat/byenatOS.git
